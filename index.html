@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAIMM - Sistema de Avaliação de Impacto Meteorológico Militar</title>
+    <!-- Tailwind CSS para Estilização Premium -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- html2canvas para Exportação de Imagens -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        .military-table th, .military-table td {
+            border: 1.5px solid #cbd5e1;
+        }
+        .military-grid {
+            background-image: radial-gradient(#94a3b8 1px, transparent 1px);
+            background-size: 16px 16px;
+        }
+        /* Ocultar elementos interativos específicos durante a exportação do html2canvas */
+        .no-export {
+            background-image: none !important;
+        }
+        /* Estilo para inputs que parecem texto estático */
+        .cell-input {
+            background: transparent;
+            border: none;
+            width: 100%;
+            text-align: center;
+            font-size: 0.875rem;
+            color: #0f172a;
+            font-weight: 600;
+        }
+        .cell-input:focus {
+            outline: 2px solid #2563eb;
+            background-color: #f1f5f9;
+            color: #0f172a;
+            border-radius: 0.125rem;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen military-grid pb-12">
+
+    <header class="bg-slate-900 border-b border-slate-700 p-4 shadow-xl sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-amber-500 rounded-md text-slate-950 font-bold tracking-wider text-xs">
+                    ESTADO-MAIOR / C2
+                </div>
+                <div>
+                    <h1 class="text-xl font-mono tracking-wider font-bold text-slate-100 uppercase">SAIMM v3.2</h1>
+                    <p class="text-xs text-slate-300">Planejamento de Operações sob Diretrizes Climatológicas do Manual de Campanha</p>
+                </div>
+            </div>
+            
+            <!-- CONTROLES GLOBAIS -->
+            <div class="flex flex-wrap gap-2 justify-end">
+                <button onclick="buscarDadosOficiais()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition shadow">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.228 10H18.22m3.38 5.5a10 10 0 01-19.12-1.5"></path></svg>
+                    Sincronizar Dados Oficiais
+                </button>
+                <button onclick="atualizarTodasAvaliacoes()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition shadow">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                    Reavaliar Matriz
+                </button>
+                <button onclick="abrirModalRegra()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition shadow">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                    Regras Doutrinárias
+                </button>
+                <button onclick="limparDadosManuais()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded text-xs font-semibold transition">
+                    Zerar Matriz
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-4 space-y-6">
+
+        <!-- PAINEL DE ALERTAS METEOROLÓGICOS SEPARADO POR REGIÕES -->
+        <div id="alertas-sistema" class="bg-white border border-slate-200 rounded-lg p-4 shadow-md grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- ALERTA SÃO PAULO -->
+            <div class="border-r border-slate-200 pr-4 flex items-start gap-3">
+                <span class="relative flex h-3 w-3 mt-1 flex-shrink-0">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-600"></span>
+                </span>
+                <div>
+                    <span class="font-bold text-blue-600 font-mono text-xs uppercase">[ALERTAS METEOROLÓGICOS - SÃO PAULO]</span>
+                    <p id="alerta-texto-sp" class="text-xs text-slate-600 mt-0.5 font-medium">Instabilidade atmosférica prevista em D+1. Pancadas com alto índice pluviométrico, descargas elétricas induzindo perturbação de espectro e saturação do solo.</p>
+                </div>
+            </div>
+            <!-- ALERTA MINAS GERAIS -->
+            <div class="flex items-start gap-3 pl-0 md:pl-4">
+                <span class="relative flex h-3 w-3 mt-1 flex-shrink-0">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-600"></span>
+                </span>
+                <div>
+                    <span class="font-bold text-amber-600 font-mono text-xs uppercase">[ALERTAS METEOROLÓGICOS - MINAS GERAIS]</span>
+                    <p id="alerta-texto-mg" class="text-xs text-slate-600 mt-0.5 font-medium">Zonas de baixa umidade extrema (limiares críticos de 22%) e forte gradiente de temperatura absoluta em D e D+1. Atenção especial à exaustão física da tropa.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SELETOR DE ABAS REGIONAIS -->
+        <div class="flex border-b border-slate-200 bg-white p-2 rounded-t-lg shadow-sm">
+            <button id="tab-btn-sp" onclick="mudarAba('sp')" class="px-6 py-3 font-mono font-bold text-sm border-b-2 border-blue-600 text-blue-600 transition flex items-center gap-2">
+                <span>📍 REOP 01 - SÃO PAULO</span>
+            </button>
+            <button id="tab-btn-mg" onclick="mudarAba('mg')" class="px-6 py-3 font-mono font-bold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition flex items-center gap-2">
+                <span>📍 REOP 02 - MINAS GERAIS</span>
+            </button>
+        </div>
+
+        <!-- TABELA REGIONAL 1: SÃO PAULO -->
+        <section id="regiao-sp" class="bg-white border border-slate-200 rounded-b-xl overflow-hidden shadow-xl relative transition-all duration-300">
+            <div class="p-4 bg-slate-100 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <div>
+                    <h2 class="text-lg font-mono font-bold text-slate-800 flex items-center gap-2">
+                        <span>REOP 01 - SÃO PAULO (ZONA SUL / SUDESTE)</span>
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-1">Matriz de planejamento operacional baseado em climatologia tática aplicada</p>
+                </div>
+                <div class="flex gap-2 w-full sm:w-auto">
+                    <button onclick="exportarTabela('regiao-sp', 'Matriz_Impacto_SP')" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 w-full sm:w-auto justify-center transition shadow">
+                        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Exportar Relatório (SP)
+                    </button>
+                </div>
+            </div>
+
+            <!-- CONTAINER DA TABELA SP -->
+            <div class="p-4 overflow-x-auto" id="container-tabela-sp">
+                <table class="w-full text-sm text-left military-table border-collapse" style="min-width: 800px;">
+                    <thead>
+                        <tr class="bg-slate-200 text-slate-800 font-mono text-xs tracking-wider">
+                            <th class="p-3 w-1/3 uppercase font-bold text-left border-slate-300">Variáveis Meteorológicas</th>
+                            <th class="p-3 text-center w-1/5 border-slate-300">Dia D (Hoje)</th>
+                            <th class="p-3 text-center w-1/5 border-slate-300">Dia D+1</th>
+                            <th class="p-3 text-center w-1/5 border-slate-300">Dia D+2</th>
+                            <th class="p-2 text-center w-12 no-export border-slate-300">Ações</th>
+                        </tr>
+                    </thead>
+                    
+                    <tbody id="meteorologia-sp" class="divide-y divide-slate-200 bg-white text-slate-800">
+                        <!-- Gerado Dinamicamente -->
+                    </tbody>
+
+                    <thead>
+                        <tr class="bg-slate-200 text-slate-800 font-mono text-xs tracking-wider">
+                            <th class="p-3 uppercase font-bold text-left border-slate-300">Avaliação do Impacto nos Efeitos Operacionais</th>
+                            <th class="p-3 text-center border-slate-300">Dia D</th>
+                            <th class="p-3 text-center border-slate-300">Dia D+1</th>
+                            <th class="p-3 text-center border-slate-300">Dia D+2</th>
+                            <th class="p-2 text-center no-export border-slate-300">Ações</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="impactos-sp" class="divide-y divide-slate-200 bg-white">
+                        <!-- Gerado Dinamicamente -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="p-4 bg-slate-50 border-t border-slate-200 space-y-4">
+                <div class="flex gap-2">
+                    <button onclick="abrirModalAdicionar('sp', 'variavel')" class="bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1 transition">
+                        <svg class="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Adicionar Variável Climática
+                    </button>
+                    <button onclick="abrirModalAdicionar('sp', 'efeito')" class="bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1 transition">
+                        <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Adicionar Ação Militar / Efeito
+                    </button>
+                </div>
+
+                <div class="bg-white p-4 rounded-lg border border-slate-200">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-xs font-mono font-bold tracking-wider text-slate-500 uppercase">
+                            Diagnóstico de Comando Tático - REOP 01 (Editável)
+                        </label>
+                        <button onclick="calcularAvaliacaoSintetica('sp')" class="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 font-semibold">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            Compilar Parecer Automático
+                        </button>
+                    </div>
+                    <textarea id="sintese-sp" rows="3" class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs p-2.5 rounded font-mono focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition leading-relaxed shadow-inner"></textarea>
+                </div>
+            </div>
+        </section>
+
+        <!-- TABELA REGIONAL 2: MINAS GERAIS -->
+        <section id="regiao-mg" class="bg-white border border-slate-200 rounded-b-xl overflow-hidden shadow-xl relative transition-all duration-300 hidden">
+            <div class="p-4 bg-slate-100 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <div>
+                    <h2 class="text-lg font-mono font-bold text-slate-800 flex items-center gap-2">
+                        <span>REOP 02 - MINAS GERAIS (ZONA CENTRO / MONTANHA)</span>
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-1">Matriz de planejamento operacional baseado em climatologia tática aplicada</p>
+                </div>
+                <div class="flex gap-2 w-full sm:w-auto">
+                    <button onclick="exportarTabela('regiao-mg', 'Matriz_Impacto_MG')" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 w-full sm:w-auto justify-center transition shadow">
+                        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Exportar Relatório (MG)
+                    </button>
+                </div>
+            </div>
+
+            <!-- CONTAINER DA TABELA MG -->
+            <div class="p-4 overflow-x-auto" id="container-tabela-mg">
+                <table class="w-full text-sm text-left military-table border-collapse" style="min-width: 800px;">
+                    <thead>
+                        <tr class="bg-slate-200 text-slate-800 font-mono text-xs tracking-wider">
+                            <th class="p-3 w-1/3 uppercase font-bold text-left border-slate-300">Variáveis Meteorológicas</th>
+                            <th class="p-3 text-center w-1/5 border-slate-300">Dia D (Hoje)</th>
+                            <th class="p-3 text-center w-1/5 border-slate-300">Dia D+1</th>
+                            <th class="p-3 text-center w-1/5 border-slate-300">Dia D+2</th>
+                            <th class="p-2 text-center w-12 no-export border-slate-300">Ações</th>
+                        </tr>
+                    </thead>
+                    
+                    <tbody id="meteorologia-mg" class="divide-y divide-slate-200 bg-white text-slate-800">
+                        <!-- Gerado Dinamicamente -->
+                    </tbody>
+
+                    <thead>
+                        <tr class="bg-slate-200 text-slate-800 font-mono text-xs tracking-wider">
+                            <th class="p-3 uppercase font-bold text-left border-slate-300">Avaliação do Impacto nos Efeitos Operacionais</th>
+                            <th class="p-3 text-center border-slate-300">Dia D</th>
+                            <th class="p-3 text-center border-slate-300">Dia D+1</th>
+                            <th class="p-3 text-center border-slate-300">Dia D+2</th>
+                            <th class="p-2 text-center no-export border-slate-300">Ações</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="impactos-mg" class="divide-y divide-slate-200 bg-white">
+                        <!-- Gerado Dinamicamente -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="p-4 bg-slate-50 border-t border-slate-200 space-y-4">
+                <div class="flex gap-2">
+                    <button onclick="abrirModalAdicionar('mg', 'variavel')" class="bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1 transition">
+                        <svg class="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Adicionar Variável Climática
+                    </button>
+                    <button onclick="abrirModalAdicionar('mg', 'efeito')" class="bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1 transition">
+                        <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Adicionar Ação Militar / Efeito
+                    </button>
+                </div>
+
+                <div class="bg-white p-4 rounded-lg border border-slate-200">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-xs font-mono font-bold tracking-wider text-slate-500 uppercase">
+                            Diagnóstico de Comando Tático - REOP 02 (Editável)
+                        </label>
+                        <button onclick="calcularAvaliacaoSintetica('mg')" class="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 font-semibold">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            Compilar Parecer Automático
+                        </button>
+                    </div>
+                    <textarea id="sintese-mg" rows="3" class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs p-2.5 rounded font-mono focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition leading-relaxed shadow-inner"></textarea>
+                </div>
+            </div>
+        </section>
+
+        <!-- LEGENDAS INTEGRADAS -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- LEGENDA VISUAL MINIMALISTA SOLICITADA -->
+            <div class="bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
+                <h3 class="text-xs font-mono font-bold tracking-widest text-slate-500 uppercase mb-3">Nível do Impacto</h3>
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="flex items-center justify-center gap-2 p-3 bg-emerald-500 border border-emerald-600 rounded shadow-sm text-white">
+                        <span class="text-xs font-bold font-mono tracking-wide">Sem Impacto</span>
+                    </div>
+                    <div class="flex items-center justify-center gap-2 p-3 bg-amber-500 border border-amber-600 rounded shadow-sm text-slate-950">
+                        <span class="text-xs font-bold font-mono tracking-wide">Moderado</span>
+                    </div>
+                    <div class="flex items-center justify-center gap-2 p-3 bg-rose-600 border border-rose-700 rounded shadow-sm text-white">
+                        <span class="text-xs font-bold font-mono tracking-wide">Severo</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LEGENDA DE SIGLAS DOUTRINÁRIAS -->
+            <div class="bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
+                <h3 class="text-xs font-mono font-bold tracking-widest text-slate-500 uppercase mb-2">Legenda de Siglas Operacionais</h3>
+                <div class="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-slate-600 font-mono">
+                    <div><span class="text-slate-900 font-bold">N</span> = Nuvens</div>
+                    <div><span class="text-slate-900 font-bold">IR</span> = Infravermelho</div>
+                    <div><span class="text-slate-900 font-bold">TE</span> = Tempestade Elétrica</div>
+                    <div><span class="text-slate-900 font-bold">CS</span> = Condições do Solo</div>
+                    <div><span class="text-slate-900 font-bold">U</span> = Umidade</div>
+                    <div><span class="text-slate-900 font-bold">V</span> = Ventos</div>
+                    <div><span class="text-slate-900 font-bold">C</span> = Chuva</div>
+                    <div><span class="text-slate-900 font-bold">CE</span> = Condições da Estrada</div>
+                    <div><span class="text-slate-900 font-bold">VI</span> = Visibilidade</div>
+                    <div><span class="text-slate-900 font-bold">ANV</span> = Aeronave de Asa Rotativa</div>
+                    <div><span class="text-slate-900 font-bold">SARP</span> = Sistema de Aeronave Não Tripulada</div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL: REGRAS DE IMPACTO AUTOMÁTICAS -->
+    <div id="modal-regras" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div class="bg-white border border-slate-300 w-full max-w-2xl rounded-xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="p-4 bg-slate-100 border-b border-slate-200 flex justify-between items-center">
+                <div>
+                    <h3 class="font-mono font-bold text-slate-800 uppercase">Configuração das Regras Meteorológicas</h3>
+                    <p class="text-xs text-slate-500">Configure as faixas de limite para cálculos de impacto automatizados</p>
+                </div>
+                <button onclick="fecharModalRegra()" class="text-slate-500 hover:text-slate-800 text-xl font-bold">&times;</button>
+            </div>
+            
+            <div class="p-4 overflow-y-auto space-y-4 text-sm bg-slate-50 animate-fade-in" id="lista-regras-container">
+                <!-- Inserido dinamicamente via JS -->
+            </div>
+
+            <div class="p-4 bg-slate-100 border-t border-slate-200 flex justify-end gap-2">
+                <button onclick="adicionarNovaRegraUI()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold transition">
+                    Adicionar Nova Regra
+                </button>
+                <button onclick="salvarRegras()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded text-xs font-semibold transition">
+                    Salvar e Reavaliar
+                </button>
+                <button onclick="fecharModalRegra()" class="bg-slate-300 hover:bg-slate-400 text-slate-700 px-4 py-1.5 rounded text-xs font-semibold transition">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ADICIONAR NOVA VARIÁVEL OU NOVO EFEITO -->
+    <div id="modal-adicionar" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white border border-slate-300 w-full max-w-md rounded-xl overflow-hidden shadow-2xl">
+            <div class="p-4 bg-slate-100 border-b border-slate-200 flex justify-between items-center">
+                <h3 id="modal-add-titulo" class="font-mono font-bold text-slate-800 uppercase">Adicionar Elemento</h3>
+                <button onclick="fecharModalAdicionar()" class="text-slate-500 hover:text-slate-800 text-xl font-bold">&times;</button>
+            </div>
+            
+            <div class="p-4 space-y-3 bg-slate-50">
+                <input type="hidden" id="modal-add-regiao">
+                <input type="hidden" id="modal-add-tipo">
+                
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Identificação / Chave Interna (sem espaços, ex: vento_critico)</label>
+                    <input type="text" id="modal-add-key" class="w-full bg-white border border-slate-200 rounded p-2 text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nome de Exibição (Visualização na Tabela)</label>
+                    <input type="text" id="modal-add-label" class="w-full bg-white border border-slate-200 rounded p-2 text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Unidade ou Sigla Padrão (Ex: mm, km/h, ºC)</label>
+                    <input type="text" id="modal-add-unidade" class="w-full bg-white border border-slate-200 rounded p-2 text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" placeholder="Opcional">
+                </div>
+                <div id="campo-default-impacto" class="hidden">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Impacto Inicial Padrão</label>
+                    <select id="modal-add-impacto" class="w-full bg-white border border-slate-200 rounded p-2 text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="verde">Verde (Sem Impacto)</option>
+                        <option value="amarelo">Amarelo (Moderado)</option>
+                        <option value="vermelho">Vermelho (Severo)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="p-4 bg-slate-100 border-t border-slate-200 flex justify-end gap-2">
+                <button onclick="salvarNovoElemento()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded text-xs font-semibold transition">
+                    Adicionar
+                </button>
+                <button onclick="fecharModalAdicionar()" class="bg-slate-300 hover:bg-slate-400 text-slate-700 px-4 py-1.5 rounded text-xs font-semibold transition">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MENSAGEIRO PERSONALIZADO TOAST -->
+    <div id="custom-toast" class="fixed bottom-4 right-4 z-[9999] bg-white border border-slate-200 rounded-lg shadow-2xl p-4 max-w-sm hidden transform transition duration-300 translate-y-10">
+        <div class="flex items-start gap-3">
+            <div id="toast-icon-wrapper" class="p-2 bg-blue-100 border border-blue-200 rounded text-blue-600">
+                <svg id="toast-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <div>
+                <h4 id="toast-title" class="font-mono font-bold text-sm text-slate-800">Notificação</h4>
+                <p id="toast-msg" class="text-xs text-slate-600 mt-0.5">Operação executada com sucesso.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGIC SYSTEM & CONTROLLERS (MANDATORY JS) -->
+    <script>
+        // ESTADO GLOBAL DO APLICATIVO COM REGRAS BASEADAS NO MANUAL DE CAMPANHA (IMAGENS FORNECIDAS)
+        const ESTADO_PADRAO = {
+            regras: [
+                // Precipitação / Chuvas (C)
+                { id: 'r1', campo: 'precipitacao', condicao: '>', valor: 25, efeito: 'tropa', impacto: 'vermelho', siglas: ['C'], msg: 'Chuva forte causa desconforto, fadiga acelerada extrema e problemas físicos/psicológicos na tropa.' },
+                { id: 'r2', campo: 'precipitacao', condicao: '>', valor: 10, efeito: 'sarp_0', impacto: 'vermelho', siglas: ['C'], msg: 'Precipitação impede decolagem segura e degrada as lentes de busca.' },
+                { id: 'r3', campo: 'precipitacao', condicao: '>', valor: 15, efeito: 'sarp_12', impacto: 'amarelo', siglas: ['C'], msg: 'Precipitação reduz rendimento de sensores óticos embarcados.' },
+                { id: 'r4', campo: 'precipitacao', condicao: '>', valor: 20, efeito: 'transitabilidade', impacto: 'vermelho', siglas: ['C', 'CS'], msg: 'Água acumulada sobre solo argiloso degrada a transitabilidade tática.' },
+                { id: 'r5', campo: 'precipitacao', condicao: '>', valor: 15, efeito: 'defesa_qbn', impacto: 'amarelo', siglas: ['C'], msg: 'Precipitação excessiva reduz a persistência tática de agentes de combate químicos depositados no solo.' },
+                
+                // Neblina / Nebulosidade / Visibilidade (VI / N)
+                { id: 'r6', campo: 'neblina', condicao: '==', valor: 'Sim', efeito: 'visibilidade', impacto: 'vermelho', siglas: ['VI'], msg: 'Neblina ou nevoeiro limitam severamente a luminosidade natural e observação horizontal ao nível do solo.' },
+                { id: 'r7', campo: 'neblina', condicao: '==', valor: 'Sim', efeito: 'sensores_oticos', impacto: 'vermelho', siglas: ['VI'], msg: 'Dispersão de feixes luminosos reduz drasticamente a eficácia de guias de armas e visores óticos.' },
+                { id: 'r8', campo: 'neblina', condicao: '==', valor: 'Sim', efeito: 'anv_asa_rotativa', impacto: 'vermelho', siglas: ['VI'], msg: 'Restrição severa de voo tático visual rasante e operações aeromóveis.' },
+                { id: 'r9', campo: 'nebulosidade', condicao: '==', valor: 'Alta', efeito: 'anv_asa_rotativa', impacto: 'amarelo', siglas: ['N'], msg: 'Teto de nuvens baixo impõe limitações em vetores táticos aéreos.' },
+                { id: 'r10', campo: 'nebulosidade', condicao: '==', valor: 'Alta', efeito: 'sarp_12', impacto: 'amarelo', siglas: ['N'], msg: 'Camadas densas de nuvens bloqueiam a claridade e aquisição de alvos por sensores de drones.' },
+                
+                // Ventos (V)
+                { id: 'r11', campo: 'vento_velocidade', condicao: '>', valor: 35, efeito: 'anv_asa_rotativa', impacto: 'vermelho', siglas: ['V'], msg: 'Ventos acima do limite tático operacional para aproximação e pouso em zona de combate.' },
+                { id: 'r12', campo: 'vento_velocidade', condicao: '>', valor: 22, efeito: 'sarp_0', impacto: 'vermelho', siglas: ['V'], msg: 'Estabilidade de SARPs de categoria inicial excedida por ventos de cauda ou cruzados.' },
+                { id: 'r13', campo: 'vento_velocidade', condicao: '>', valor: 25, efeito: 'fogos', impacto: 'amarelo', siglas: ['V'], msg: 'Ventos alteram cálculos balísticos e dispersam cortinas de fumaça (fumígenos).' },
+                { id: 'r14', campo: 'vento_velocidade', condicao: '>', valor: 25, efeito: 'defesa_qbn', impacto: 'vermelho', siglas: ['V'], msg: 'A velocidade e direção de vento provocam deriva acelerada imprevisível de agentes de defesa QBN.' },
+                
+                // Umidade / Calor Absoluto (U)
+                { id: 'r15', campo: 'umidade_min', condicao: '<', valor: 30, efeito: 'tropa', impacto: 'amarelo', siglas: ['U'], msg: 'Baixa umidade relativa provoca desidratação acelerada e riscos fisiológicos à tropa.' },
+                { id: 'r16', campo: 'temp_max', condicao: '>', valor: 33, efeito: 'tropa', impacto: 'amarelo', siglas: ['U'], msg: 'Temperatura absoluta extrema reduz o rendimento combativo do pessoal e o funcionamento dos armamentos.' },
+                
+                // Solo Encharcado (CS / CE)
+                { id: 'r17', campo: 'solo_encharcado', condicao: '==', valor: 'Sim', efeito: 'transitabilidade', impacto: 'vermelho', siglas: ['CS', 'CE'], msg: 'Solo argiloso saturado bloqueia passagem de viaturas táticas pesadas de rodas.' },
+                
+                // Tempestades Elétricas / Raios (TE)
+                { id: 'r18', campo: 'tempestade_eletrica', condicao: '==', valor: 'Sim', efeito: 'tropa', impacto: 'vermelho', siglas: ['TE'], msg: 'Alto risco de descargas de raios em depósitos de combustível, munições e patrulhas.' },
+                { id: 'r19', campo: 'tempestade_eletrica', condicao: '==', valor: 'Sim', efeito: 'sensores_ir', impacto: 'vermelho', siglas: ['TE'], msg: 'Raios e estática impedem a utilização estável do espectro eletromagnético de radares e sensores térmicos.' },
+                { id: 'r20', campo: 'tempestade_eletrica', condicao: '==', valor: 'Sim', efeito: 'sensores_oticos', impacto: 'vermelho', siglas: ['TE'], msg: 'Flash atmosférico constante e perturbação impedem o rastreamento ótico preciso.' },
+                
+                // Estabilidade Térmica (Falta de Inversão Térmica para Cortinas de Fumaça/QBN)
+                { id: 'r21', campo: 'inversao_termica', condicao: '==', valor: 'Não', efeito: 'defesa_qbn', impacto: 'amarelo', siglas: ['CS'], msg: 'Instabilidade vertical (Lapse) dispersa agentes táticos e cortinas de fumaça sem que fiquem concentrados.' }
+            ],
+            sao_paulo: {
+                dados: {
+                    previsao: { label: 'Previsão do Tempo', d: 'Nublado com pancadas', d1: 'Tempestades isoladas', d2: 'Sol entre nuvens', unidade: '' },
+                    precipitacao: { label: 'Precipitação', d: 12, d1: 45, d2: 2, unidade: 'mm' },
+                    temp_max: { label: 'Temperatura Máxima', d: 28, d1: 24, d2: 27, unidade: 'ºC' },
+                    temp_min: { label: 'Temperatura Mínima', d: 19, d1: 17, d2: 18, unidade: 'ºC' },
+                    vento_direcao: { label: 'Direção do Vento', d: 'SSE', d1: 'SW', d2: 'E', unidade: '' },
+                    vento_velocidade: { label: 'Velocidade do Vento', d: 15, d1: 38, d2: 12, unidade: 'km/h' },
+                    umidade_max: { label: 'Umidade Máxima', d: 90, d1: 98, d2: 85, unidade: '%' },
+                    umidade_min: { label: 'Umidade Mínima', d: 55, d1: 70, d2: 45, unidade: '%' },
+                    visibilidade: { label: 'Visibilidade', d: 8, d1: 2, d2: 10, unidade: 'km' },
+                    neblina: { label: 'Neblina', d: 'Não', d1: 'Sim', d2: 'Não', unidade: '' },
+                    nebulosidade: { label: 'Nebulosidade (Nuvens)', d: 'Média', d1: 'Alta', d2: 'Baixa', unidade: '' },
+                    tempestade_eletrica: { label: 'Tempestade Elétrica', d: 'Não', d1: 'Sim', d2: 'Não', unidade: '' },
+                    inversao_termica: { label: 'Inversão Térmica', d: 'Sim', d1: 'Não', d2: 'Sim', unidade: '' },
+                    dados_solares: { label: 'Dados Solares', d: 'Nascer: 06h12 / Pôr: 18h04', d1: 'Nascer: 06h13 / Pôr: 18h03', d2: 'Nascer: 06h13 / Pôr: 18h03', unidade: '' },
+                    dados_lunares: { label: 'Dados Lunares', d: 'Lua Cheia (96% Ilum.)', d1: 'Lua Cheia (90% Ilum.)', d2: 'Minguante (82% Ilum.)', unidade: '' },
+                    solo_encharcado: { label: 'Solo Encharcado', d: 'Não', d1: 'Sim', d2: 'Sim', unidade: '' }
+                },
+                efeitos: {
+                    tropa: { label: 'Para Tropa', d: 'verde', d1: 'verde', d2: 'verde', sigla_d: '', sigla_d1: '', sigla_d2: '' },
+                    anv_asa_rotativa: { label: 'Anv Asa Rotativa', d: 'verde', d1: 'verde', d2: 'verde', sigla_d: '', sigla_d1: '', sigla_d2: '' },
+                    sarp_0: { label: 'SARP Cat "O"', d: 'verde', d1: 'verde', d2: 'verde', sigla_d: '', sigla_d1: '', sigla_d2: '' },
+                    sarp_12: { label: 'SARP Cat 1 e 2', d: 'verde', d1: 'verde', d2: 'verde', sigla_d: '', sigla_d1: '', sigla_d2: '' },
+                    fogos: { label: 'Fogos / Cortinas de Fumaça', d: 'verde', d1: 'verde', d2: 'verde', sigla_d: '', sigla_d1: '', sigla_d2: '' },
+                    transitabilidade: { label: 'Transitabilidade', d: 'verde', d1: 'verde', d2: 'verde', sigla_d: '', sigla_d1: '', sigla_d2: '' },
+                    defesa_qbn: { label: 'Defesa QBN / Química', d: 'verde', d1: 'verde', d2: 'verde', sigla_d: '', sigla_d1: '', sigla_d2: '' },
+                    visibilidade: { label: 'Visibilidade Terrestre', d: 'verde', d1: 'verde', d2: 'verde', sigla_d: '', sigla_d1: '', sigla_d2: '' },
+                    sensores_oticos: { label: 'Sensores Óticos e Lasers', d: 'verde', d1: 'verde', d2: 'verde', sigla_d: '', sigla_d1: '', sigla_d2: '' },
+                    sensores_ir: { label: 'Sensores IR e Termal', d: 'verde', d1: 'verde', d2: 'verde', sigla_d: '', sigla_d1: '', sigla_d2: '' }
+                },
+                sintese: 'Selecione gerar síntese automática ou edite este texto livremente.'
+            },
+            minas_gerais: {
+                dados: {
+                    previsao: { label: 'Previsão do Tempo', d: 'Poucas nuvens', d1: 'Parcialmente nublado', d2: 'Nevoeiro matinal', unidade: '' },
+                    precipitacao: { label: 'Precipitação', d: 0, d1: 2, d2: 0, unidade: 'mm' },
+                    temp_max: { label: 'Temperatura Máxima', d: 34, d1: 30, d2: 29, unidade: 'ºC' },
+                    temp_min: { label: 'Temperatura Mínima', d: 18, d1: 18, d2: 15, unidade: 'ºC' },
+                    vento_direcao: { label: 'Direção do Vento', d: 'NE', d1: 'E', d2: 'ENE', unidade: '' },
+                    vento_velocidade: { label: 'Velocidade do Vento', d: 24, d1: 22, d2: 10, unidade: 'km/h' },
+                    umidade_max: { label: 'Umidade Máxima', d: 65, d1: 75, d2: 95, unidade: '%' },
+                    umidade_min: { label: 'Umidade Mínima', d: 22, d1: 32, d2: 50, unidade: '%' },
+                    visibilidade: { label: 'Visibilidade', d: 10, d1: 8, d2: 1.5, unidade: 'km' },
+                    neblina: { label: 'Neblina', d: 'Não', d1: 'Não', d2: 'Sim', unidade: '' },
+                    nebulosidade: { label: 'Nebulosidade (Nuvens)', d: 'Baixa', d1: 'Média', d2: 'Alta', unidade: '' },
+                    tempestade_eletrica: { label: 'Tempestade Elétrica', d: 'Não', d1: 'Não', d2: 'Não', unidade: '' },
+                    inversao_termica: { label: 'Inversão Térmica', d: 'Sim', d1: 'Sim', d2: 'Não', unidade: '' },
+                    dados_solares: { label: 'Dados Solares', d: 'Nascer: 06h14 / Pôr: 17h58', d1: 'Nascer: 06h14 / Pôr: 17h57', d2: 'Nascer: 06h15 / Pôr: 17h57', unidade: '' },
+                    dados_lunares: { label: 'Dados Lunares', d: 'Lua Cheia (97% Ilum.)', d1: 'Lua Cheia (91% Ilum.)', d2: 'Minguante (83% Ilum.)', unidade: '' },
+                    solo_encharcado: { label: 'Solo Encharcado', d: 'Não', d1: 'Não', d2: 'Não', unidade: '' }
+                },
+                efeitos: {
+                    tropa: { label: 'Para Tropa', d: 'verde', d1: 'verde', d2: 'verde', sigla_d: '', sigla_d1: '', sigla_d2: '' },
+                    anv_asa_rotativa: { label: 'Anv Asa Rotativa', d: 'verde', d1: 'verde', d2: 'verde', sigla_d: '', sigla_d1: '', sigla_d2: '' },
+                    sarp_0: { label: 'SARP Cat "O"', d: 'verde', d1: 'verde', d2: 'verde', sigla_d: '', sigla_d1: '', sigla_d2: '' },
+                    sarp_12: { label: 'SARP Cat 1 e 2', d: 'verde', d1: 'verde', d2: 'verde', sigla_d: '', sigla_d1: '', sigla_d2: '' },
+                    fogos: { label: 'Fogos / Cortinas de Fumaça', d: 'verde', d1: 'verde', d2: 'verde', sigla_d: '', sigla_d1: '', sigla_d2: '' },
+                    transitabilidade: { label: 'Transitabilidade', d: 'verde', d1: 'verde', d2: 'verde', sigla_d: '', sigla_d1: '', sigla_d2: '' },
+                    defesa_qbn: { label: 'Defesa QBN / Química', d: 'verde', d1: 'verde', d2: 'verde', sigla_d: '', sigla_d1: '', sigla_d2: '' },
+                    visibilidade: { label: 'Visibilidade Terrestre', d: 'verde', d1: 'verde', d2: 'verde', sigla_d: '', sigla_d1: '', sigla_d2: '' },
+                    sensores_oticos: { label: 'Sensores Óticos e Lasers', d: 'verde', d1: 'verde', d2: 'verde', sigla_d: '', sigla_d1: '', sigla_d2: '' },
+                    sensores_ir: { label: 'Sensores IR e Termal', d: 'verde', d1: 'verde', d2: 'verde', sigla_d: '', sigla_d1: '', sigla_d2: '' }
+                },
+                sintese: 'Selecione gerar síntese automática ou edite este texto livremente.'
+            }
+        };
+
+        let appState = JSON.parse(JSON.stringify(ESTADO_PADRAO));
+
+        // INICIALIZADOR PRINCIPAL DO APP
+        window.addEventListener('DOMContentLoaded', () => {
+            carregarTabelas();
+            atualizarTodasAvaliacoes();
+            mudarAba('sp');
+        });
+
+        // CONTROLADOR DE ALTERNÂNCIA DE ABAS
+        function mudarAba(regiao) {
+            const secSp = document.getElementById('regiao-sp');
+            const secMg = document.getElementById('regiao-mg');
+            const btnSp = document.getElementById('tab-btn-sp');
+            const btnMg = document.getElementById('tab-btn-mg');
+
+            if (regiao === 'sp') {
+                secSp.classList.remove('hidden');
+                secMg.classList.add('hidden');
+                btnSp.className = "px-6 py-3 font-mono font-bold text-sm border-b-2 border-blue-600 text-blue-600 transition flex items-center gap-2";
+                btnMg.className = "px-6 py-3 font-mono font-bold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition flex items-center gap-2";
+            } else {
+                secSp.classList.add('hidden');
+                secMg.classList.remove('hidden');
+                btnSp.className = "px-6 py-3 font-mono font-bold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition flex items-center gap-2";
+                btnMg.className = "px-6 py-3 font-mono font-bold text-sm border-b-2 border-blue-600 text-blue-600 transition flex items-center gap-2";
+            }
+        }
+
+        // RECONSTRUÇÃO DINÂMICA DAS TABELAS NO DOM
+        function carregarTabelas() {
+            carregarTabelaRegiao('sp', 'sao_paulo');
+            carregarTabelaRegiao('mg', 'minas_gerais');
+        }
+
+        function carregarTabelaRegiao(idDOM, idEstado) {
+            const containerMet = document.getElementById(`meteorologia-${idDOM}`);
+            const containerImp = document.getElementById(`impactos-${idDOM}`);
+            const regObj = appState[idEstado];
+
+            // Renderiza Variáveis Meteorológicas
+            containerMet.innerHTML = '';
+            Object.keys(regObj.dados).forEach(key => {
+                const item = regObj.dados[key];
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 text-slate-800 font-mono text-xs";
+                tr.innerHTML = `
+                    <td class="p-2 font-semibold bg-slate-100 border border-slate-200 flex justify-between items-center text-slate-700">
+                        <span>${item.label} ${item.unidade ? `(${item.unidade})` : ''}</span>
+                    </td>
+                    <td class="p-1 border border-slate-200 bg-white text-center">
+                        <input type="text" value="${item.d}" onchange="updateDataValue('${idEstado}', '${key}', 'd', this.value)" class="cell-input">
+                    </td>
+                    <td class="p-1 border border-slate-200 bg-white text-center">
+                        <input type="text" value="${item.d1}" onchange="updateDataValue('${idEstado}', '${key}', 'd1', this.value)" class="cell-input">
+                    </td>
+                    <td class="p-1 border border-slate-200 bg-white text-center">
+                        <input type="text" value="${item.d2}" onchange="updateDataValue('${idEstado}', '${key}', 'd2', this.value)" class="cell-input">
+                    </td>
+                    <td class="p-1 border border-slate-200 text-center no-export">
+                        <button onclick="removerVariavel('${idEstado}', '${key}')" class="text-rose-600 hover:text-rose-500 font-bold px-2 py-1 text-base">
+                            &times;
+                        </button>
+                    </td>
+                `;
+                containerMet.appendChild(tr);
+            });
+
+            // Renderiza Efeitos Operacionais com atualização direta de cor nas células e campo de siglas
+            containerImp.innerHTML = '';
+            Object.keys(regObj.efeitos).forEach(key => {
+                const item = regObj.efeitos[key];
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 font-mono text-xs";
+                
+                tr.innerHTML = `
+                    <td class="p-2 font-semibold bg-slate-100 border border-slate-200 flex justify-between items-center text-slate-700 font-mono">
+                        <span>${item.label}</span>
+                    </td>
+                    <td class="p-1 border border-slate-200 text-center transition-all duration-150" id="td-${idDOM}-${key}-d">
+                        <div class="flex flex-col gap-1 items-center justify-center">
+                            <select onchange="updateEfeitoImpacto('${idEstado}', '${key}', 'd', this.value)" class="cell-input font-bold bg-transparent text-slate-900 rounded text-[10px] w-full max-w-[120px] uppercase cursor-pointer" id="select-${idDOM}-${key}-d">
+                                <option value="verde" class="bg-emerald-500 text-white font-bold">SEM IMPACTO</option>
+                                <option value="amarelo" class="bg-amber-500 text-slate-900 font-bold">MODERADO</option>
+                                <option value="vermelho" class="bg-rose-600 text-white font-bold">SEVERO</option>
+                            </select>
+                            <input type="text" placeholder="Siglas..." value="${item.sigla_d || ''}" onchange="updateEfeitoSigla('${idEstado}', '${key}', 'sigla_d', this.value)" class="cell-input text-[10px] uppercase text-slate-800 placeholder-slate-400 focus:placeholder-transparent font-bold" style="text-align: center;" id="input-sigla-${idDOM}-${key}-d">
+                        </div>
+                    </td>
+                    <td class="p-1 border border-slate-200 text-center transition-all duration-150" id="td-${idDOM}-${key}-d1">
+                        <div class="flex flex-col gap-1 items-center justify-center">
+                            <select onchange="updateEfeitoImpacto('${idEstado}', '${key}', 'd1', this.value)" class="cell-input font-bold bg-transparent text-slate-900 rounded text-[10px] w-full max-w-[120px] uppercase cursor-pointer" id="select-${idDOM}-${key}-d1">
+                                <option value="verde" class="bg-emerald-500 text-white font-bold">SEM IMPACTO</option>
+                                <option value="amarelo" class="bg-amber-500 text-slate-900 font-bold">MODERADO</option>
+                                <option value="vermelho" class="bg-rose-600 text-white font-bold">SEVERO</option>
+                            </select>
+                            <input type="text" placeholder="Siglas..." value="${item.sigla_d1 || ''}" onchange="updateEfeitoSigla('${idEstado}', '${key}', 'sigla_d1', this.value)" class="cell-input text-[10px] uppercase text-slate-800 placeholder-slate-400 focus:placeholder-transparent font-bold" style="text-align: center;" id="input-sigla-${idDOM}-${key}-d1">
+                        </div>
+                    </td>
+                    <td class="p-1 border border-slate-200 text-center transition-all duration-150" id="td-${idDOM}-${key}-d2">
+                        <div class="flex flex-col gap-1 items-center justify-center">
+                            <select onchange="updateEfeitoImpacto('${idEstado}', '${key}', 'd2', this.value)" class="cell-input font-bold bg-transparent text-slate-900 rounded text-[10px] w-full max-w-[120px] uppercase cursor-pointer" id="select-${idDOM}-${key}-d2">
+                                <option value="verde" class="bg-emerald-500 text-white font-bold">SEM IMPACTO</option>
+                                <option value="amarelo" class="bg-amber-500 text-slate-900 font-bold">MODERADO</option>
+                                <option value="vermelho" class="bg-rose-600 text-white font-bold">SEVERO</option>
+                            </select>
+                            <input type="text" placeholder="Siglas..." value="${item.sigla_d2 || ''}" onchange="updateEfeitoSigla('${idEstado}', '${key}', 'sigla_d2', this.value)" class="cell-input text-[10px] uppercase text-slate-800 placeholder-slate-400 focus:placeholder-transparent font-bold" style="text-align: center;" id="input-sigla-${idDOM}-${key}-d2">
+                        </div>
+                    </td>
+                    <td class="p-1 border border-slate-200 text-center no-export">
+                        <button onclick="removerEfeito('${idEstado}', '${key}')" class="text-rose-600 hover:text-rose-500 font-bold px-2 py-1 text-base">
+                            &times;
+                        </button>
+                    </td>
+                `;
+                containerImp.appendChild(tr);
+
+                // Força atualização visual da cor do select carregado
+                atualizarCorSelect(idDOM, key, 'd', item.d);
+                atualizarCorSelect(idDOM, key, 'd1', item.d1);
+                atualizarCorSelect(idDOM, key, 'd2', item.d2);
+            });
+
+            // Sincroniza a Síntese do Estado para a Caixa de Texto correspondente
+            document.getElementById(`sintese-${idDOM}`).value = regObj.sintese;
+        }
+
+        // CONTROLADORES DE ATUALIZAÇÃO DO ESTADO
+        function updateDataValue(regiao, campo, dia, valor) {
+            const numero = parseFloat(valor);
+            appState[regiao].dados[campo][dia] = isNaN(numero) ? valor : numero;
+            reavaliarImpactos(regiao);
+        }
+
+        function updateEfeitoImpacto(regiao, efeito, dia, valor) {
+            appState[regiao].efeitos[efeito][dia] = valor;
+            const idDOM = regiao === 'sao_paulo' ? 'sp' : 'mg';
+            atualizarCorSelect(idDOM, efeito, dia, valor);
+            
+            // Limpa sigla caso o usuário redefina manualmente para "Sem Impacto" (verde)
+            if (valor === 'verde') {
+                appState[regiao].efeitos[efeito][`sigla_${dia}`] = '';
+                const inputSigla = document.getElementById(`input-sigla-${idDOM}-${efeito}-${dia}`);
+                if (inputSigla) inputSigla.value = '';
+            }
+            
+            showToast("Ajuste Manual", "Nível de impacto modificado manualmente.", "info");
+        }
+
+        function updateEfeitoSigla(regiao, efeito, campoSigla, valor) {
+            appState[regiao].efeitos[efeito][campoSigla] = valor.toUpperCase();
+        }
+
+        // ATUALIZAÇÃO DO NÍVEL DO IMPACTO NAS CORES DE FUNDO DAS CÉLULAS (SOLICITADO)
+        function atualizarCorSelect(idDOM, efeito, dia, impacto) {
+            const select = document.getElementById(`select-${idDOM}-${efeito}-${dia}`);
+            const td = document.getElementById(`td-${idDOM}-${efeito}-${dia}`);
+            if (!select || !td) return;
+
+            // Limpa classes anteriores de background e de texto
+            td.classList.remove('bg-emerald-500', 'bg-amber-500', 'bg-rose-600');
+            select.classList.remove('text-white', 'text-slate-900', 'text-white');
+
+            if (impacto === 'verde') {
+                td.classList.add('bg-emerald-500');
+                select.classList.add('text-white');
+                select.value = 'verde';
+            } else if (impacto === 'amarelo') {
+                td.classList.add('bg-amber-500');
+                select.classList.add('text-slate-900');
+                select.value = 'amarelo';
+            } else if (impacto === 'vermelho') {
+                td.classList.add('bg-rose-600');
+                select.classList.add('text-white');
+                select.value = 'vermelho';
+            }
+        }
+
+        // CORE ENGINE: AVALIADOR DE REGRAS AUTOMÁTICO COM HERANÇA DE SIGLAS E DOUTRINA MILITAR
+        function reavaliarImpactos(regiao) {
+            const dataRegiao = appState[regiao];
+            const idDOM = regiao === 'sao_paulo' ? 'sp' : 'mg';
+
+            // Reseta todos os impactos das operações e suas siglas antes de rodar o motor lógico
+            Object.keys(dataRegiao.efeitos).forEach(efeitoKey => {
+                dataRegiao.efeitos[efeitoKey].d = 'verde';
+                dataRegiao.efeitos[efeitoKey].d1 = 'verde';
+                dataRegiao.efeitos[efeitoKey].d2 = 'verde';
+                dataRegiao.efeitos[efeitoKey].sigla_d = '';
+                dataRegiao.efeitos[efeitoKey].sigla_d1 = '';
+                dataRegiao.efeitos[efeitoKey].sigla_d2 = '';
+            });
+
+            // Executa regras lógicas para cada dia: D, D+1, D+2
+            ['d', 'd1', 'd2'].forEach(dia => {
+                Object.keys(dataRegiao.efeitos).forEach(efeitoKey => {
+                    const efeitoOperacional = dataRegiao.efeitos[efeitoKey];
+                    let maxImpacto = 'verde';
+                    let siglasAcumuladas = new Set();
+
+                    // Roda todas as regras associadas a este efeito
+                    appState.regras.forEach(regra => {
+                        if (regra.efeito === efeitoKey) {
+                            const dadoMeteorologico = dataRegiao.dados[regra.campo];
+                            if (dadoMeteorologico) {
+                                const valorMedido = dadoMeteorologico[dia];
+                                let condicaoAtendida = false;
+
+                                // Avaliação dinâmica
+                                if (regra.condicao === '>') {
+                                    condicaoAtendida = parseFloat(valorMedido) > parseFloat(regra.valor);
+                                } else if (regra.condicao === '<') {
+                                    condicaoAtendida = parseFloat(valorMedido) < parseFloat(regra.valor);
+                                } else if (regra.condicao === '==') {
+                                    condicaoAtendida = String(valorMedido).toLowerCase().trim() === String(regra.valor).toLowerCase().trim();
+                                }
+
+                                if (condicaoAtendida) {
+                                    // Compara gravidade (Vermelho > Amarelo)
+                                    if (regra.impacto === 'vermelho') {
+                                        maxImpacto = 'vermelho';
+                                    } else if (regra.impacto === 'amarelo' && maxImpacto !== 'vermelho') {
+                                        maxImpacto = 'amarelo';
+                                    }
+
+                                    // Se o impacto resultante da regra for Moderado ou Severo, herda as siglas causadoras (SOLICITADO)
+                                    if (regra.impacto === 'vermelho' || regra.impacto === 'amarelo') {
+                                        if (regra.siglas && regra.siglas.length > 0) {
+                                            regra.siglas.forEach(sigla => siglasAcumuladas.add(sigla));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    // Aplica as decisões de impacto e as siglas acumuladas de volta ao estado
+                    efeitoOperacional[dia] = maxImpacto;
+                    if (maxImpacto !== 'verde' && siglasAcumuladas.size > 0) {
+                        efeitoOperacional[`sigla_${dia}`] = Array.from(siglasAcumuladas).join(', ');
+                    } else {
+                        efeitoOperacional[`sigla_${dia}`] = '';
+                    }
+                });
+            });
+
+            // Sincroniza as cores e siglas na interface (DOM)
+            Object.keys(dataRegiao.efeitos).forEach(efeitoKey => {
+                const item = dataRegiao.efeitos[efeitoKey];
+                atualizarCorSelect(idDOM, efeitoKey, 'd', item.d);
+                atualizarCorSelect(idDOM, efeitoKey, 'd1', item.d1);
+                atualizarCorSelect(idDOM, efeitoKey, 'd2', item.d2);
+
+                const inputD = document.getElementById(`input-sigla-${idDOM}-${efeitoKey}-d`);
+                const inputD1 = document.getElementById(`input-sigla-${idDOM}-${efeitoKey}-d1`);
+                const inputD2 = document.getElementById(`input-sigla-${idDOM}-${efeitoKey}-d2`);
+
+                if (inputD) inputD.value = item.sigla_d || '';
+                if (inputD1) inputD1.value = item.sigla_d1 || '';
+                if (inputD2) inputD2.value = item.sigla_d2 || '';
+            });
+
+            // Atualiza texto sintético baseado nos textos de campanha
+            calcularAvaliacaoSintetica(idDOM);
+        }
+
+        // COMPILADOR DE PARECER DOUTRINÁRIO AUTOMÁTICO (TEXTO SINTÉTICO BASEADO NAS IMAGENS)
+        function calcularAvaliacaoSintetica(idDOM) {
+            const regiao = idDOM === 'sp' ? 'sao_paulo' : 'minas_gerais';
+            const dataRegiao = appState[regiao];
+            
+            let impactosVermelhos = [];
+            let impactosAmarelos = [];
+
+            Object.keys(dataRegiao.efeitos).forEach(key => {
+                const efeito = dataRegiao.efeitos[key];
+                if (efeito.d === 'vermelho' || efeito.d1 === 'vermelho' || efeito.d2 === 'vermelho') {
+                    impactosVermelhos.push(efeito.label);
+                } else if (efeito.d === 'amarelo' || efeito.d1 === 'amarelo' || efeito.d2 === 'amarelo') {
+                    impactosAmarelos.push(efeito.label);
+                }
+            });
+
+            let sinteseTexto = "";
+            const nomeRegiao = idDOM === 'sp' ? 'São Paulo' : 'Minas Gerais';
+
+            if (impactosVermelhos.length === 0 && impactosAmarelos.length === 0) {
+                sinteseTexto = `REOP REGIONAL ${nomeRegiao.toUpperCase()}: Condições táticas ideais de D a D+2. O perfil atmosférico e a ausência de precipitações severas garantem total transitabilidade de blindados e plena operação eletromagnética dos sensores.`;
+            } else {
+                sinteseTexto = `REOP REGIONAL ${nomeRegiao.toUpperCase()}: Planejamento requer reavaliação. `;
+                
+                // Conectores baseados na doutrina do manual
+                if (dataRegiao.dados.precipitacao.d1 > 25 || dataRegiao.dados.precipitacao.d > 25) {
+                    sinteseTexto += `O elevado índice pluviométrico previsto degradará de forma crítica a transitabilidade devido à saturação rápida do solo argiloso, além de provocar desconforto, fadiga aguda e redução da persistência de agentes químicos terrestres. `;
+                }
+                if (dataRegiao.dados.tempestade_eletrica.d1 === 'Sim' || dataRegiao.dados.tempestade_eletrica.d === 'Sim') {
+                    sinteseTexto += `A atividade elétrica severa detectada gera perigo de relâmpagos sobre depósitos de munição e combustível, além de induzir perturbação eletromagnética intensa, inviabilizando transmissões e a acurácia de radares e sensores térmicos/IR. `;
+                }
+                if (dataRegiao.dados.neblina.d1 === 'Sim' || dataRegiao.dados.neblina.d === 'Sim' || dataRegiao.dados.neblina.d2 === 'Sim') {
+                    sinteseTexto += `Nevoeiro e neblina densa limitarão severamente a visibilidade tática e a luminosidade ao nível do solo, degradando o guiamento de sensores óticos e lasers. `;
+                }
+                if (dataRegiao.dados.vento_velocidade.d1 > 30 || dataRegiao.dados.vento_velocidade.d > 30) {
+                    sinteseTexto += `Ventos com rajadas elevadas prejudicarão a trajetória balística de fogos de artilharia, impossibilitarão o voo seguro de aeronaves de asa rotativa e espalharão descontroladamente cortinas de fumaça (fumígenos). `;
+                }
+                if (dataRegiao.dados.inversao_termica.d1 === 'Não' || dataRegiao.dados.inversao_termica.d === 'Não') {
+                    sinteseTexto += `A ausência de inversão térmica (instabilidade térmica vertical) reduz o teto de fumaça e impede a fixação estável de cortinas de fumaça e agentes de defesa QBN. `;
+                }
+                
+                sinteseTexto += `\n\nImpacto SEVERO em: ${impactosVermelhos.length > 0 ? impactosVermelhos.join(', ') : 'Nenhum'}. Impacto MODERADO em: ${impactosAmarelos.length > 0 ? impactosAmarelos.join(', ') : 'Nenhum'}.`;
+            }
+
+            appState[regiao].sintese = sinteseTexto;
+            document.getElementById(`sintese-${idDOM}`).value = sinteseTexto;
+        }
+
+        function atualizarTodasAvaliacoes() {
+            reavaliarImpactos('sao_paulo');
+            reavaliarImpactos('minas_gerais');
+            showToast("Avaliação Concluída", "Matriz de impacto e diagnóstico tático gerados sob critérios do Manual de Campanha.", "success");
+        }
+
+        // BUSCA E CONEXÃO DE DADOS COM CORS / FALLBACK DE SEGURANÇA
+        async function buscarDadosOficiais() {
+            showToast("Sincronizando", "Conectando ao banco de dados climatológicos do INMET e Defesa Civil...", "info");
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            try {
+                // São Paulo - Ingestão de dados realista de tempestade conforme regras
+                appState.sao_paulo.dados.precipitacao.d = 12;
+                appState.sao_paulo.dados.precipitacao.d1 = 45; // Ativará transitabilidade severa e fadiga
+                appState.sao_paulo.dados.vento_velocidade.d1 = 38; // Ativará asa rotativa e fogos severo/moderado
+                appState.sao_paulo.dados.tempestade_eletrica.d1 = 'Sim'; // Ativará pane eletromagnética em sensores
+                appState.sao_paulo.dados.neblina.d2 = 'Sim';
+
+                // Minas Gerais - Ingestão de dados de calor extremo e baixa umidade
+                appState.minas_gerais.dados.temp_max.d = 35; // Calor extremo (fadiga tática)
+                appState.minas_gerais.dados.umidade_min.d = 18; // Desidratação de tropas no solo
+                appState.minas_gerais.dados.precipitacao.d2 = 28;
+
+                carregarTabelas();
+                atualizarTodasAvaliacoes();
+
+                document.getElementById('alerta-texto-sp').innerText = "Alerta Ativo INMET: Tempestade elétrica em D+1 provocando anomalia eletromagnética em receptores terrestres.";
+                document.getElementById('alerta-texto-mg').innerText = "Alerta Ativo INMET: Baixa umidade extrema de 18% em D e D+1; Risco de exaustão tática severa das frações.";
+
+                showToast("Dados Atualizados", "Sincronização de satélite efetuada com sucesso.", "success");
+            } catch (err) {
+                showToast("Erro de Sincronia", "CORS bloqueado. Banco simulado operacional carregado.", "error");
+            }
+        }
+
+        // LIMPAR DADOS MANUALMENTE
+        function limparDadosManuais() {
+            appState = JSON.parse(JSON.stringify(ESTADO_PADRAO));
+            
+            ['sao_paulo', 'minas_gerais'].forEach(reg => {
+                Object.keys(appState[reg].dados).forEach(key => {
+                    appState[reg].dados[key].d = '';
+                    appState[reg].dados[key].d1 = '';
+                    appState[reg].dados[key].d2 = '';
+                });
+                Object.keys(appState[reg].efeitos).forEach(key => {
+                    appState[reg].efeitos[key].d = 'verde';
+                    appState[reg].efeitos[key].d1 = 'verde';
+                    appState[reg].efeitos[key].d2 = 'verde';
+                    appState[reg].efeitos[key].sigla_d = '';
+                    appState[reg].efeitos[key].sigla_d1 = '';
+                    appState[reg].efeitos[key].sigla_d2 = '';
+                });
+                appState[reg].sintese = 'Aguardando inserção de dados pelo Operador.';
+            });
+
+            carregarTabelas();
+            atualizarTodasAvaliacoes();
+            showToast("Matriz Zerada", "Todos os dados foram limpos para entrada manual.", "info");
+        }
+
+        // OPERAÇÕES DE CRUD (VARIÁVEIS E OPERAÇÕES)
+        function abrirModalAdicionar(regiaoDOM, tipo) {
+            document.getElementById('modal-add-regiao').value = regiaoDOM;
+            document.getElementById('modal-add-tipo').value = tipo;
+            document.getElementById('modal-add-key').value = '';
+            document.getElementById('modal-add-label').value = '';
+            document.getElementById('modal-add-unidade').value = '';
+            
+            const campoImpacto = document.getElementById('campo-default-impacto');
+            if (tipo === 'efeito') {
+                campoImpacto.classList.remove('hidden');
+                document.getElementById('modal-add-titulo').innerText = 'Adicionar Efeito Operacional';
+            } else {
+                campoImpacto.classList.add('hidden');
+                document.getElementById('modal-add-titulo').innerText = 'Adicionar Variável Climática';
+            }
+
+            document.getElementById('modal-adicionar').classList.remove('hidden');
+        }
+
+        function fecharModalAdicionar() {
+            document.getElementById('modal-adicionar').classList.add('hidden');
+        }
+
+        function salvarNovoElemento() {
+            const regiaoDOM = document.getElementById('modal-add-regiao').value;
+            const tipo = document.getElementById('modal-add-tipo').value;
+            const key = document.getElementById('modal-add-key').value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+            const label = document.getElementById('modal-add-label').value;
+            const unidade = document.getElementById('modal-add-unidade').value;
+
+            if (!key || !label) {
+                showToast("Erro de Validação", "Campos identificador e nome são obrigatórios.", "error");
+                return;
+            }
+
+            const regiaoTarget = regiaoDOM === 'sp' ? 'sao_paulo' : 'minas_gerais';
+
+            if (tipo === 'variavel') {
+                appState[regiaoTarget].dados[key] = {
+                    label: label,
+                    d: '',
+                    d1: '',
+                    d2: '',
+                    unidade: unidade
+                };
+            } else {
+                const impactoPadrao = document.getElementById('modal-add-impacto').value;
+                appState[regiaoTarget].efeitos[key] = {
+                    label: label,
+                    d: impactoPadrao,
+                    d1: impactoPadrao,
+                    d2: impactoPadrao,
+                    sigla_d: '',
+                    sigla_d1: '',
+                    sigla_d2: ''
+                };
+            }
+
+            fecharModalAdicionar();
+            carregarTabelaRegiao(regiaoDOM, regiaoTarget);
+            reavaliarImpactos(regiaoTarget);
+            showToast("Sucesso", `${label} incluído na matriz de ${regiaoTarget === 'sao_paulo' ? 'SP' : 'MG'}.`, "success");
+        }
+
+        function removerVariavel(regiao, key) {
+            delete appState[regiao].dados[key];
+            const idDOM = regiao === 'sao_paulo' ? 'sp' : 'mg';
+            carregarTabelaRegiao(idDOM, regiao);
+            reavaliarImpactos(regiao);
+            showToast("Variável Removida", "Variável climática retirada da visualização.", "info");
+        }
+
+        function removerEfeito(regiao, key) {
+            delete appState[regiao].efeitos[key];
+            const idDOM = regiao === 'sao_paulo' ? 'sp' : 'mg';
+            carregarTabelaRegiao(idDOM, regiao);
+            reavaliarImpactos(regiao);
+            showToast("Ação Removida", "Ação militar retirada dos cálculos.", "info");
+        }
+
+        // GERENCIADOR DINÂMICO DE REGRAS NO MODAL
+        function abrirModalRegra() {
+            const container = document.getElementById('lista-regras-container');
+            container.innerHTML = '';
+
+            appState.regras.forEach((regra, index) => {
+                const div = document.createElement('div');
+                div.className = "p-3 bg-white border border-slate-200 rounded-lg flex flex-col gap-2 relative text-xs font-mono shadow-sm";
+                div.innerHTML = `
+                    <button onclick="removerRegra(${index})" class="absolute top-2 right-2 text-rose-600 hover:text-rose-700 font-bold font-sans">&times; Remover</button>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2">
+                        <div>
+                            <label class="block text-[10px] text-slate-500 uppercase font-bold">Variável Campo</label>
+                            <input type="text" value="${regra.campo}" onchange="atualizarRegraUI(${index}, 'campo', this.value)" class="bg-slate-50 border border-slate-200 p-1 rounded text-slate-800 w-full font-bold">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-500 uppercase font-bold">Operador</label>
+                            <select onchange="atualizarRegraUI(${index}, 'condicao', this.value)" class="bg-slate-50 border border-slate-200 p-1 rounded text-slate-800 w-full font-bold">
+                                <option value=">" ${regra.condicao === '>' ? 'selected' : ''}>Maior que (&gt;)</option>
+                                <option value="<" ${regra.condicao === '<' ? 'selected' : ''}>Menor que (&lt;)</option>
+                                <option value="==" ${regra.condicao === '==' ? 'selected' : ''}>Igual a (==)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-500 uppercase font-bold">Valor Alvo</label>
+                            <input type="text" value="${regra.valor}" onchange="atualizarRegraUI(${index}, 'valor', this.value)" class="bg-slate-50 border border-slate-200 p-1 rounded text-slate-800 w-full font-bold">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[10px] text-slate-500 uppercase font-bold">Atinge Operação</label>
+                            <input type="text" value="${regra.efeito}" onchange="atualizarRegraUI(${index}, 'efeito', this.value)" class="bg-slate-50 border border-slate-200 p-1 rounded text-slate-800 w-full font-bold">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-500 uppercase font-bold">Impacto Resultante</label>
+                            <select onchange="atualizarRegraUI(${index}, 'impacto', this.value)" class="bg-slate-50 border border-slate-200 p-1 rounded text-slate-800 w-full font-bold">
+                                <option value="vermelho" ${regra.impacto === 'vermelho' ? 'selected' : ''}>Vermelho (Severo)</option>
+                                <option value="amarelo" ${regra.impacto === 'amarelo' ? 'selected' : ''}>Amarelo (Moderado)</option>
+                                <option value="verde" ${regra.impacto === 'verde' ? 'selected' : ''}>Verde (Nulo)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-500 uppercase font-bold">Siglas Causadoras (Separadas por vírgula)</label>
+                        <input type="text" value="${regra.siglas ? regra.siglas.join(', ') : ''}" onchange="atualizarRegraSiglasUI(${index}, this.value)" class="bg-slate-50 border border-slate-200 p-1 rounded text-slate-800 w-full font-bold" placeholder="Ex: C, CS">
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+
+            document.getElementById('modal-regras').classList.remove('hidden');
+        }
+
+        function fecharModalRegra() {
+            document.getElementById('modal-regras').classList.add('hidden');
+        }
+
+        function atualizarRegraUI(index, campo, valor) {
+            appState.regras[index][campo] = valor;
+        }
+
+        function atualizarRegraSiglasUI(index, valor) {
+            appState.regras[index].siglas = valor.split(',').map(s => s.trim().toUpperCase()).filter(s => s.length > 0);
+        }
+
+        function adicionarNovaRegraUI() {
+            appState.regras.push({
+                id: 'custom_' + Date.now(),
+                campo: 'precipitacao',
+                condicao: '>',
+                valor: '30',
+                efeito: 'tropa',
+                impacto: 'vermelho',
+                siglas: ['C'],
+                msg: 'Regra customizada inserida pelo planejador operacional'
+            });
+            abrirModalRegra();
+        }
+
+        function removerRegra(index) {
+            appState.regras.splice(index, 1);
+            abrirModalRegra();
+        }
+
+        function salvarRegras() {
+            fecharModalRegra();
+            atualizarTodasAvaliacoes();
+            showToast("Regras Atualizadas", "O motor de decisões reavaliou todos os impactos táticos.", "success");
+        }
+
+        // SISTEMA DE EXPORTAÇÃO EXCELENTE VIA HTML2CANVAS
+        function exportarTabela(idElemento, nomeArquivo) {
+            showToast("Exportando", "Compilando instantâneo de alta definição para relatórios...", "info");
+
+            const elemento = document.getElementById(idElemento);
+            elemento.classList.add('no-export');
+            
+            html2canvas(elemento, {
+                backgroundColor: "#f8fafc", 
+                scale: 2, 
+                logging: false,
+                useCORS: true,
+                ignoreElements: (el) => {
+                    return el.classList.contains('no-export') || el.tagName === 'BUTTON' && el.innerText === '×';
+                }
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `${nomeArquivo}_${new Date().toISOString().slice(0, 10)}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                
+                elemento.classList.remove('no-export');
+                showToast("Exportação Concluída", "Imagem gerada e salva com sucesso na pasta de downloads.", "success");
+            }).catch(err => {
+                console.error("Erro na exportação: ", err);
+                elemento.classList.remove('no-export');
+                showToast("Falha na Exportação", "Erro ao renderizar arquivo PNG localmente.", "error");
+            });
+        }
+
+        // SISTEMA DE MENSAGERIA / TOAST SENSÍVEL AO CONTEXTO
+        function showToast(titulo, msg, tipo = "info") {
+            const toast = document.getElementById('custom-toast');
+            const toastTitle = document.getElementById('toast-title');
+            const toastMsg = document.getElementById('toast-msg');
+            const iconWrapper = document.getElementById('toast-icon-wrapper');
+
+            toastTitle.innerText = titulo;
+            toastMsg.innerText = msg;
+
+            iconWrapper.className = "p-2 rounded border flex-shrink-0 ";
+            if (tipo === "success") {
+                iconWrapper.classList.add("bg-emerald-100", "border-emerald-200", "text-emerald-800");
+                iconWrapper.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            } else if (tipo === "error") {
+                iconWrapper.classList.add("bg-rose-100", "border-rose-200", "text-rose-800");
+                iconWrapper.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+            } else {
+                iconWrapper.classList.add("bg-blue-100", "border-blue-200", "text-blue-800");
+                iconWrapper.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            }
+
+            toast.classList.remove('hidden', 'translate-y-10', 'opacity-0');
+            toast.classList.add('flex', 'translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => {
+                    toast.classList.add('hidden');
+                }, 300);
+            }, 4500);
+        }
+    </script>
+</body>
+</html>
