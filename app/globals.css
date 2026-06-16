@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.military-table th,
+.military-table td {
+  border: 1.5px solid #cbd5e1;
+}
+
+.military-grid {
+  background-image: radial-gradient(#94a3b8 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+/* Ocultar elementos interativos específicos durante a exportação do html2canvas */
+.no-export {
+  background-image: none !important;
+}
+
+/* Estilo para inputs que parecem texto estático */
+.cell-input {
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.cell-input:focus {
+  outline: 2px solid #2563eb;
+  background-color: #f1f5f9;
+  color: #0f172a;
+  border-radius: 0.125rem;
+}
